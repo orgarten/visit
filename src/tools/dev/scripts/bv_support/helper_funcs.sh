@@ -491,8 +491,15 @@ function download_file
     IFS="." read -r -a vers <<< "$VISIT_VERSION"
     major=${vers[0]}
     minor=${vers[1]}
-    site="${thirdpartyroot}v${major}.${minor}.0"
-    try_download_file $site/$dfile $dfile
+    site1="${thirdpartyroot_dev}"
+    site2="${thirdpartyroot}v${major}.${minor}.0"
+
+    try_download_file $site2/$dfile $dfile
+    if [[ $? == 0 ]] ; then
+        return 0
+    fi
+
+    try_download_file $site1/$dfile $dfile
     if [[ $? == 0 ]] ; then
         return 0
     fi
