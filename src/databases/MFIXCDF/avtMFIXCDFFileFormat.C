@@ -51,7 +51,9 @@
 #define cbrt(x) (pow(x, 1.0/3.0))
 #endif
 
+
 using std::unique_ptr;
+
 using std::vector;
 using std::ostringstream;
 
@@ -1584,14 +1586,13 @@ avtMFIXCDFFileFormat::GetVectorVar(int domain, const char *varname)
         nzvals= (widths[2]+3);
     }
 
-    // This trick with unique_ptr makes xvec, yvec and zvec get deleted
-    // when they go out of scope.
     unique_ptr< vector<float> > xvec(new vector<float>(totZones));
     float* xdata= &(*xvec)[0];
     unique_ptr< vector<float> > yvec(new vector<float>(totZones));
     float* ydata= &(*yvec)[0];
     unique_ptr< vector<float> > zvec(new vector<float>(totZones));
     float* zdata= &(*zvec)[0];
+
 
     if (!strncmp(varname,"Vel_",4))
     {
