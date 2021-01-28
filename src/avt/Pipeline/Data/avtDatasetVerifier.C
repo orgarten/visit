@@ -9,6 +9,7 @@
 #include <avtDatasetVerifier.h>
 
 #include <vtkCellArray.h>
+#include <vtkCellArrayIterator.h>
 #include <vtkCellData.h>
 #include <vtkDataSet.h>
 #include <vtkFloatArray.h>
@@ -378,41 +379,42 @@ void
 avtDatasetVerifier::CheckConnectivity(int dom, int nTotalPts, vtkCellArray *arr, 
                                       const char *name)
 {
-    int numEntries = arr->GetNumberOfConnectivityEntries();
-    vtkIdType *start_ptr = arr->GetPointer();
-    vtkIdType *ptr       = start_ptr;
-    int ncells = arr->GetNumberOfCells();
-    for (int i = 0 ; i < ncells ; i++)
+    if (!arr->IsValid())
     {
-        int npts = *ptr;
-        if ((ptr+npts-start_ptr) > numEntries)
+        char msg[1024];
+        sprintf(msg, "In domain %d, connectivity data is in an invalid state. "
+                 "Unrecoverable error.", dom);
+        avtCallback::IssueWarning(msg);
+        return;
+    }
+
+    auto cellIter = vtk::TakeSmartPointer(arr->NewIterator());
+    for (cellIter->GoToFirstCell(); !cellIter->IsDoneWithTraversal(); cellIter->GoToNextCell())
+    {
+        vtkIdList *ptIds = cellIter->GetCurrentCell();
+        vtkIdType npts = ptIds->GetNumberOfIds();
+        bool replaceCell = false;
+        for (vtkIdType j = 0 ; j < npts ; j++)
         {
-            char msg[1024];
-            sprintf(msg, "In domain %d, connectivity values go beyond declared "
-                         "allocation.  Unrecoverable error.", dom);
-            avtCallback::IssueWarning(msg);
-            return;
-        }
-        ptr++;
-        for (int j = 0 ; j < npts ; j++)
-        {
-            if (*ptr < 0 || *ptr >= nTotalPts)
+            if (ptIds->GetId(j) < 0 || ptIds->GetId(j) >= nTotalPts)
             {
+                replaceCell = true;
                 if (!issuedSafeModeWarning)
                 {
                     char msg[1024];
                     sprintf(msg, "In domain %d, your connectivity array (%s) "
-                                 "has a bad value. Cell %d references point %lld "
+                                 "has a bad value. Cell %lld references point %lld "
                                  "and the maximum value is %d.  Note that "
                                  "only the first error encountered is reported.",
-                            dom, name, i, *ptr, nTotalPts);
+                            dom, name, cellIter->GetCurrentCellId(), ptIds->GetId(j), nTotalPts);
                     avtCallback::IssueWarning(msg);
                     issuedSafeModeWarning = true;
                 }
-                *ptr = 0;
+                ptIds->SetId(j, 0);
             }
-            ptr++;
         }
+        if(replaceCell)
+            cellIter->ReplaceCurrentCell(ptIds);
     }
 }
 

@@ -213,17 +213,17 @@ protected:
 
   // Helper methods
   int GeneratePoints(vtkIdType offset, vtkIdType inCellId,
-                     vtkIdType npts, vtkIdType *pts,
+                     vtkIdType npts, const vtkIdType *pts,
                      vtkPoints *inPts, vtkPoints *newPts, 
                      vtkPointData *pd, vtkPointData *outPD,
                      vtkFloatArray *newNormals,
                      vtkDataArray *inScalars, bool cellScalars,
                      double range[2], vtkDataArray *inVectors, double maxNorm, 
                      vtkDataArray *inNormals);
-  void GenerateStrips(vtkIdType offset, vtkIdType npts, vtkIdType *pts, 
+  void GenerateStrips(vtkIdType offset, vtkIdType npts, const vtkIdType *pts,
                       vtkIdType inCellId, vtkCellData *cd, vtkCellData *outCD,
                       vtkCellArray *newStrips);
-  void GenerateTextureCoords(vtkIdType offset, vtkIdType npts, vtkIdType *pts, 
+  void GenerateTextureCoords(vtkIdType offset, vtkIdType npts, const vtkIdType *pts,
                              vtkPoints *inPts, 
                              vtkDataArray *inScalars, bool cellScalars,
                             vtkFloatArray *newTCoords);
@@ -233,8 +233,8 @@ protected:
   double Theta;
 
 private:
-  vtkVisItTubeFilter(const vtkVisItTubeFilter&);  // Not implemented.
-  void operator=(const vtkVisItTubeFilter&);  // Not implemented.
+  vtkVisItTubeFilter(const vtkVisItTubeFilter&) = delete;
+  void operator=(const vtkVisItTubeFilter&) = delete;
 };
 
 #endif

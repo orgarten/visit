@@ -21,14 +21,18 @@ class vtkDataSet;
 //    Jeremy Meredith, Mon Sep 15 09:49:10 PDT 2003
 //    Put into its own file.
 //
+//    Kathleen Biagas, Thu Apr  2 17:41:55 PDT 2020
+//    Add offsets, to keep in line with storage in VTK 9's vtkCellArray class:
+//    separate connectivity and offsets arrays.  Remove cellIndex.
+//
 // ****************************************************************************
 struct MIRConnectivity
 {
+    vtkIdType *offsets;
     vtkIdType *connectivity;
-    int  ncells;
+    vtkIdType  ncells;
     int *celltype;
-    int *cellindex;
-       
+
     MIRConnectivity();
     ~MIRConnectivity();
     void SetUpConnectivity(vtkDataSet *);

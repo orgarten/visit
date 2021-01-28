@@ -11,7 +11,6 @@
 include_directories(
 ${VISIT_BINARY_DIR}/include
 ${VISIT_SOURCE_DIR}/include
-${VTK_INCLUDE_DIRS}
 )
 
 
@@ -24,3 +23,4 @@ elseif(HAVE_EGL)
 endif()
 
 VISIT_INSTALL_TARGETS(visit_vtk_offscreen)
+target_link_libraries(visit_vtk_offscreen VTK::CommonCore)

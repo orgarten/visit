@@ -491,8 +491,7 @@ int vtkYoungsMaterialInterface::Execute(vtkDataSet *input,
             cell.nEdges = vtkcell->GetNumberOfEdges();
             for(int i=0;i<cell.nEdges;i++)
             {
-                int tmp[4];
-                int * edgePoints = tmp;
+                const vtkIdType *edgePoints = nullptr;
                 cell3D->GetEdgePoints(i,edgePoints);
                 cell.edges[i][0] = edgePoints[0];
                 DBG_ASSERT( cell.edges[i][0]>=0 && cell.edges[i][0]<cell.np );
@@ -942,8 +941,7 @@ int vtkYoungsMaterialInterface::Execute(vtkDataSet *input,
                             nextCell.nEdges = vtkcell->GetNumberOfEdges();
                             for(int i=0;i<nextCell.nEdges;i++)
                             {
-                                int tmp[4];
-                                int * edgePoints = tmp;
+                                const vtkIdType * edgePoints = nullptr;
                                 cell3D->GetEdgePoints(i,edgePoints);
                                 nextCell.edges[i][0] = edgePoints[0];
                                 DBG_ASSERT( nextCell.edges[i][0]>=0 && nextCell.edges[i][0]<nextCell.np );
@@ -1037,36 +1035,52 @@ int vtkYoungsMaterialInterface::Execute(vtkDataSet *input,
         points->Delete();
 
         // set cell connectivity
-        vtkIdTypeArray* cellArrayData = vtkIdTypeArray::New();
-        cellArrayData->SetNumberOfValues( Mats[m].cellArrayCount );
-        vtkIdType* cellArrayDataPtr = cellArrayData->WritePointer(0,Mats[m].cellArrayCount);
-        for(vtkIdType i=0;i<Mats[m].cellArrayCount;i++) cellArrayDataPtr[i] = Mats[m].cells[i];
+        //
+        // Mats[m].cells is arranged in the old VTK (pre v9) way:
+        //   c1_nids, c1_id_1, c1_id_2, ... c1_id_n-1, c2_nids, c2_id_1 ...
+        //
+        // VTK (v9+) connectivity array only contains the point ids for each cell
+        // with offsets into that array separately and cellLocations aren't needed
+
+        int conn_size = Mats[m].cellArrayCount - Mats[m].cellCount;
+
+        vtkNew<vtkIdTypeArray> offsets;
+        offsets->SetNumberOfValues(Mats[m].cellCount+1);
+        vtkIdType oid = 0;
+        offsets->SetValue(oid++, 0);
+
+        vtkNew<vtkIdTypeArray> connectivity;
+        connectivity->SetNumberOfValues(conn_size);
+
+        const vtkIdType *data = &Mats[m].cells[0];
+        const vtkIdType * const dEnd = data + Mats[m].cellArrayCount;
+        vtkIdType offset = 0;
+        vtkIdType cid = 0;
+        while(data < dEnd)
+        {
+            vtkIdType numPts = *data++;
+            offset += numPts;
+            offsets->SetValue(oid++, offset);
+            while(numPts-- > 0)
+            {
+                connectivity->SetValue(cid++, *data++);
+            }
+        }
 
         vtkCellArray* cellArray = vtkCellArray::New();
-        cellArray->SetCells( Mats[m].cellCount , cellArrayData );
-        cellArrayData->Delete();
+        cellArray->SetData(offsets, connectivity);
 
         // set cell types
         vtkUnsignedCharArray *cellTypes = vtkUnsignedCharArray::New();
         cellTypes->SetNumberOfValues( Mats[m].cellCount );
         unsigned char* cellTypesPtr = cellTypes->WritePointer(0,Mats[m].cellCount);
-        for(vtkIdType i=0;i<Mats[m].cellCount;i++) cellTypesPtr[i] = Mats[m].cellTypes[i];
-
-        // set cell locations
-        vtkIdTypeArray* cellLocations = vtkIdTypeArray::New();
-        cellLocations->SetNumberOfValues( Mats[m].cellCount );
-        vtkIdType counter = 0;
         for(vtkIdType i=0;i<Mats[m].cellCount;i++)
-        {
-            cellLocations->SetValue(i,counter);
-            counter += Mats[m].cells[counter] + 1;
-        }
+            cellTypesPtr[i] = Mats[m].cellTypes[i];
 
         // attach conectivity arrays to data set
-        ugOutput->SetCells( cellTypes, cellLocations, cellArray );
+        ugOutput->SetCells( cellTypes, cellArray );
         cellArray->Delete();
         cellTypes->Delete();
-        cellLocations->Delete();
 
         // attach point arrays
         for(int i=0;i<nPointData-1;i++)

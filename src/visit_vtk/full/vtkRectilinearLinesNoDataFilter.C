@@ -7,6 +7,7 @@
 #include <vtkAccessors.h>
 #include <vtkCellArray.h>
 #include <vtkCellData.h>
+#include <vtkIdTypeArray.h>
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
 #include <vtkObjectFactory.h>
@@ -31,16 +32,17 @@ using  std::vector;
     p.SetComponent(2, z.GetComponent(bk));                                    \
     ++p;                                                                      \
     outPointData->CopyData(inPointData, ((bk*nY) + bj)*nX + bi, pointId++);   \
-    *nl++ = 2;                                                                \
-    *nl++ = pointId-2;                                                        \
-    *nl++ = pointId-1;                                                        \
+    currentOffset += 2;                                                       \
+    *ol++ = currentOffset;                                                    \
+    *cl++ = pointId-2;                                                        \
+    *cl++ = pointId-1;                                                        \
     cellId++;                                                                 \
 }
 
 
 template <class Accessor> inline void
 vtkRectilinearLinesNoDataFilter_AddLines(int nX, int nY, int nZ,
-    vtkIdType *nl, vtkPointData *outPointData, vtkPointData *inPointData,
+    vtkIdType *ol, vtkIdType* cl, vtkPointData *outPointData, vtkPointData *inPointData,
     Accessor x, Accessor y, Accessor z, Accessor p)
 {
     //
@@ -50,6 +52,12 @@ vtkRectilinearLinesNoDataFilter_AddLines(int nX, int nY, int nZ,
     int cellId = 0;
 
     p.InitTraversal();
+
+    // set first offset 
+    *ol++ = 0;
+    // Each subsequent offsets will be previous + numPtsInCell, so
+    // create something to hold incrementer
+    vtkIdType currentOffset = 0;
 
     // This case is mutually exclusive with the other ones below....
     if ((nX==1 && nY==1) || (nX==1 && nZ==1) || (nY==1 && nZ==1))
@@ -262,9 +270,14 @@ vtkRectilinearLinesNoDataFilter::RequestData(
     //
     // And set up the cell arrays for creation (but not copying data)
     vtkCellArray *polys = vtkCellArray::New();
-    vtkIdTypeArray *list = vtkIdTypeArray::New();
-    list->SetNumberOfValues(numOutCells*(2+1));
-    vtkIdType *nl = list->GetPointer(0);
+
+    vtkIdTypeArray *offsets = vtkIdTypeArray::New();
+    offsets->SetNumberOfValues(numOutCells+1);
+    vtkIdType *ol = offsets->GetPointer(0);
+
+    vtkIdTypeArray *connectivity = vtkIdTypeArray::New();
+    connectivity->SetNumberOfValues(numOutCells*2);
+    vtkIdType *cl = connectivity->GetPointer(0);
 
     //
     // And now actually create the points/lines
@@ -272,7 +285,7 @@ vtkRectilinearLinesNoDataFilter::RequestData(
     if (same && type == VTK_FLOAT)
     {
         vtkRectilinearLinesNoDataFilter_AddLines(nX, nY, nZ,
-            nl, outPointData, inPointData,
+            ol, cl, outPointData, inPointData,
             vtkDirectAccessor<float>(xc), 
             vtkDirectAccessor<float>(yc), 
             vtkDirectAccessor<float>(zc), 
@@ -281,7 +294,7 @@ vtkRectilinearLinesNoDataFilter::RequestData(
     else if (same && type == VTK_DOUBLE)
     {
         vtkRectilinearLinesNoDataFilter_AddLines(nX, nY, nZ,
-            nl, outPointData, inPointData,
+            ol, cl, outPointData, inPointData,
             vtkDirectAccessor<double>(xc), 
             vtkDirectAccessor<double>(yc), 
             vtkDirectAccessor<double>(zc), 
@@ -290,7 +303,7 @@ vtkRectilinearLinesNoDataFilter::RequestData(
     else
     {
         vtkRectilinearLinesNoDataFilter_AddLines(nX, nY, nZ,
-            nl, outPointData, inPointData,
+            ol, cl, outPointData, inPointData,
             vtkGeneralAccessor(xc), 
             vtkGeneralAccessor(yc), 
             vtkGeneralAccessor(zc), 
@@ -303,8 +316,9 @@ vtkRectilinearLinesNoDataFilter::RequestData(
     outPD->SetPoints(pts);
     pts->Delete();
   
-    polys->SetCells(numOutCells, list);
-    list->Delete();
+    polys->SetData(offsets, connectivity);
+    offsets->Delete();
+    connectivity->Delete();
     outCellData->Squeeze();
     outPD->SetLines(polys);
     polys->Delete();

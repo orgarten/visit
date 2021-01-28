@@ -89,9 +89,9 @@ IF(VISIT_PYTHON_FILTERS)
 # Place symlinks to its components in lib/site-packages/
     MESSAGE(STATUS "Adding VTK python wrappers to lib/site-packages/")
     IF (NOT WIN32)
-        FILE(GLOB VTK_PYTHON_MODULE_ITEMS "${VISIT_VTK_DIR}/lib/python${PYTHON_VERSION}/site-packages/*")
+        FILE(GLOB VTK_PYTHON_MODULE_ITEMS "${VTK_PY_WRAPPERS_DIR}/*")
         IF(NOT VTK_PYTHON_MODULE_ITEMS)
-            MESSAGE(WARNING "Failed to find VTK Python module in ${VISIT_VTK_DIR}/lib/python${PYTHON_VERSION}/site-packages/")
+            MESSAGE(WARNING "Failed to find VTK Python module in ${VTK_PY_WRAPPERS_DIR")
         endif()
         FOREACH(ITM ${VTK_PYTHON_MODULE_ITEMS})
             GET_FILENAME_COMPONENT(ITM_ABS ${ITM} ABSOLUTE)
@@ -109,15 +109,15 @@ IF(VISIT_PYTHON_FILTERS)
             ENDIF(NOT "${VTK_MODULE_SYM_CREATE}" STREQUAL "0")
         ENDFOREACH(ITM ${VTK_PYTHON_MODULE_ITEMS})
     ELSE (NOT WIN32)
-        FILE(GLOB VTK_EGG_FILE "${VTK_PY_WRAPPERS_DIR}/site-packages/*egg*")
+        #FILE(GLOB VTK_EGG_FILE "${VTK_PY_WRAPPERS_DIR}/site-packages/*egg*")
         # because you don't need to choose your configuration up-front
         # on windows, make this a custom target so they are copied to the
         # correct lib/${CFG} directory
         ADD_CUSTOM_TARGET(vtk_python_modules ALL
             COMMAND ${CMAKE_COMMAND} -E copy_directory
-                    ${VTK_PY_WRAPPERS_DIR}/site-packages/vtk
-                    ${VISIT_LIBRARY_DIR}/site-packages/vtk
-            COMMENT "Copying ${VTK_PY_WRAPPERS_DIR}/site-packages to ${VISIT_LIBRARY_DIR}/site-packages/vtk"
+                    ${VTK_PY_WRAPPERS_DIR}
+                    ${VISIT_LIBRARY_DIR}/site-packages
+            COMMENT "Copying ${VTK_PY_WRAPPERS_DIR} to ${VISIT_LIBRARY_DIR}/site-packages"
         )
         if(VISIT_NO_ALLBUILD)
             add_dependencies(visit_special_builds vtk_python_modules)

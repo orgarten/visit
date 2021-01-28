@@ -228,7 +228,6 @@ ${VISIT_SOURCE_DIR}/visit_vtk/full
 ${VISIT_SOURCE_DIR}/visit_vtk/lightweight
 ${VTKh_INCLUDE_DIRS}
 ${VTKm_INCLUDE_DIRS}
-${VTK_INCLUDE_DIRS}
 ${ZLIB_INCLUDE_DIR}
 )
 
@@ -244,9 +243,9 @@ ENDIF(NOT VISIT_DBIO_ONLY)
 ADD_LIBRARY(avtpipeline_ser ${ALL_SOURCES})
 TARGET_LINK_LIBRARIES(avtpipeline_ser
                       visitcommon ${AVTMATH} avtdbatts
-                      visit_vtk lightweight_visit_vtk vtkCommonCore
-                      vtkCommonDataModel vtkCommonMath vtkCommonTransforms
-                      vtkFiltersGeometry
+                      visit_vtk lightweight_visit_vtk VTK::CommonCore
+                      VTK::CommonDataModel VTK::CommonMath VTK::CommonTransforms
+                      VTK::FiltersGeometry
                       ${ZLIB_LIBRARY})
 if(VTKH_FOUND)
     target_link_libraries(avtpipeline_ser vtkh)
@@ -260,9 +259,9 @@ IF(VISIT_PARALLEL)
 
     TARGET_LINK_LIBRARIES(avtpipeline_par
                           visitcommon ${AVTMATH} avtdbatts
-                          visit_vtk lightweight_visit_vtk vtkCommonCore
-                          vtkCommonDataModel vtkCommonMath vtkCommonTransforms
-                          vtkFiltersGeometry
+                          visit_vtk lightweight_visit_vtk VTK::CommonCore
+                          VTK::CommonDataModel VTK::CommonMath VTK::CommonTransforms
+                          VTK::FiltersGeometry
                           ${ZLIB_LIBRARY})
     if(VTKH_FOUND)
         target_link_libraries(avtpipeline_par vtkh)

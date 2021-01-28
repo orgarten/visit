@@ -7,6 +7,7 @@
 #include <vtkAccessors.h>
 #include <vtkCellArray.h>
 #include <vtkCellData.h>
+#include <vtkIdTypeArray.h>
 #include <vtkInformation.h>
 #include <vtkInformationVector.h>
 #include <vtkObjectFactory.h>
@@ -446,9 +447,19 @@ vtkRectilinearGridFacelistFilter::RequestData(
   outCellData->CopyAllocate(inCellData);
 
   vtkCellArray *polys = vtkCellArray::New();
-  vtkIdTypeArray *list = vtkIdTypeArray::New();
-  list->SetNumberOfValues(numOutCells*(4+1));
-  vtkIdType *nl = list->GetPointer(0);
+
+  vtkNew<vtkIdTypeArray> offsets;
+  offsets->SetNumberOfValues(numOutCells+1);
+  vtkIdType *ol = offsets->GetPointer(0);
+  // Set first offset entry
+  *ol++ = 0;
+  // subsequent offsets will be incremented by number of points in current cell
+  // Create a holder for the incrementation
+  vtkIdType currentOffset = 0;
+
+  vtkNew<vtkIdTypeArray> connectivity; 
+  connectivity->SetNumberOfValues(numOutCells*4);
+  vtkIdType *cl = connectivity->GetPointer(0);
   
   //
   // Left face
@@ -461,11 +472,12 @@ vtkRectilinearGridFacelistFilter::RequestData(
   {
     for (i = 0 ; i < nY-1 ; ++i)
     {
-      *nl++ = 4;
-      *nl++ = indexer.GetLeftFacePoint(i, j);
-      *nl++ = indexer.GetLeftFacePoint(i, j+1);
-      *nl++ = indexer.GetLeftFacePoint(i+1, j+1);
-      *nl++ = indexer.GetLeftFacePoint(i+1, j);
+      currentOffset += 4;
+      *ol++ = currentOffset;
+      *cl++ = indexer.GetLeftFacePoint(i, j);
+      *cl++ = indexer.GetLeftFacePoint(i, j+1);
+      *cl++ = indexer.GetLeftFacePoint(i+1, j+1);
+      *cl++ = indexer.GetLeftFacePoint(i+1, j);
       int cId = indexer.GetCellIndex(0, i, j);
       outCellData->CopyData(inCellData, cId, cellId);
       ++cellId;
@@ -484,11 +496,12 @@ vtkRectilinearGridFacelistFilter::RequestData(
     {
       for (j = 0 ; j < nZ-1 ; ++j) 
       {
-        *nl++ = 4;
-        *nl++ = indexer.GetRightFacePoint(i, j);
-        *nl++ = indexer.GetRightFacePoint(i+1, j);
-        *nl++ = indexer.GetRightFacePoint(i+1, j+1);
-        *nl++ = indexer.GetRightFacePoint(i, j+1);
+        currentOffset += 4;
+        *ol++ = currentOffset;
+        *cl++ = indexer.GetRightFacePoint(i, j);
+        *cl++ = indexer.GetRightFacePoint(i+1, j);
+        *cl++ = indexer.GetRightFacePoint(i+1, j+1);
+        *cl++ = indexer.GetRightFacePoint(i, j+1);
         int cId = indexer.GetCellIndex(nX-2, i, j);
         outCellData->CopyData(inCellData, cId, cellId);
         ++cellId;
@@ -506,11 +519,12 @@ vtkRectilinearGridFacelistFilter::RequestData(
   {
     for (j = 0 ; j < nZ-1 ; ++j)
     {
-      *nl++ = 4;
-      *nl++ = indexer.GetBottomFacePoint(i, j);
-      *nl++ = indexer.GetBottomFacePoint(i+1, j);
-      *nl++ = indexer.GetBottomFacePoint(i+1, j+1);
-      *nl++ = indexer.GetBottomFacePoint(i, j+1);
+      currentOffset += 4;
+      *ol++ = currentOffset;
+      *cl++ = indexer.GetBottomFacePoint(i, j);
+      *cl++ = indexer.GetBottomFacePoint(i+1, j);
+      *cl++ = indexer.GetBottomFacePoint(i+1, j+1);
+      *cl++ = indexer.GetBottomFacePoint(i, j+1);
       int cId = indexer.GetCellIndex(i, 0, j);
       outCellData->CopyData(inCellData, cId, cellId);
       ++cellId;
@@ -529,11 +543,12 @@ vtkRectilinearGridFacelistFilter::RequestData(
     {
       for (i = 0 ; i < nX-1 ; ++i)
       {
-        *nl++ = 4;
-        *nl++ = indexer.GetTopFacePoint(i, j);
-        *nl++ = indexer.GetTopFacePoint(i, j+1);
-        *nl++ = indexer.GetTopFacePoint(i+1, j+1);
-        *nl++ = indexer.GetTopFacePoint(i+1, j);
+        currentOffset += 4;
+        *ol++ = currentOffset;
+        *cl++ = indexer.GetTopFacePoint(i, j);
+        *cl++ = indexer.GetTopFacePoint(i, j+1);
+        *cl++ = indexer.GetTopFacePoint(i+1, j+1);
+        *cl++ = indexer.GetTopFacePoint(i+1, j);
         int cId = indexer.GetCellIndex(i, nY-2, j);
         outCellData->CopyData(inCellData, cId, cellId);
         ++cellId;
@@ -551,11 +566,12 @@ vtkRectilinearGridFacelistFilter::RequestData(
   {
     for (i = 0 ; i < nX-1 ; ++i)
     {
-      *nl++ = 4;
-      *nl++ = indexer.GetFrontFacePoint(i, j);
-      *nl++ = indexer.GetFrontFacePoint(i, j+1);
-      *nl++ = indexer.GetFrontFacePoint(i+1, j+1);
-      *nl++ = indexer.GetFrontFacePoint(i+1, j);
+      currentOffset += 4;
+      *ol++ = currentOffset;
+      *cl++ = indexer.GetFrontFacePoint(i, j);
+      *cl++ = indexer.GetFrontFacePoint(i, j+1);
+      *cl++ = indexer.GetFrontFacePoint(i+1, j+1);
+      *cl++ = indexer.GetFrontFacePoint(i+1, j);
       int cId = indexer.GetCellIndex(i, j, 0);
       outCellData->CopyData(inCellData, cId, cellId);
       ++cellId;
@@ -574,20 +590,20 @@ vtkRectilinearGridFacelistFilter::RequestData(
     {
       for (j = 0 ; j < nY-1 ; ++j)
       {
-        *nl++ = 4;
-        *nl++ = indexer.GetBackFacePoint(i, j);
-        *nl++ = indexer.GetBackFacePoint(i+1, j);
-        *nl++ = indexer.GetBackFacePoint(i+1, j+1);
-        *nl++ = indexer.GetBackFacePoint(i, j+1);
+        currentOffset += 4;
+        *ol++ = currentOffset;
+        *cl++ = indexer.GetBackFacePoint(i, j);
+        *cl++ = indexer.GetBackFacePoint(i+1, j);
+        *cl++ = indexer.GetBackFacePoint(i+1, j+1);
+        *cl++ = indexer.GetBackFacePoint(i, j+1);
         int cId = indexer.GetCellIndex(i, j, nZ-2);
         outCellData->CopyData(inCellData, cId, cellId);
         ++cellId;
       }
     }
   }
-  
-  polys->SetCells(numOutCells, list);
-  list->Delete();
+
+  polys->SetData(offsets, connectivity);
   outCellData->Squeeze();
   outPD->SetPolys(polys);
   polys->Delete();
@@ -598,7 +614,7 @@ vtkRectilinearGridFacelistFilter::RequestData(
      // We only get to this spot if we have ghost zones -- which makes 
      // consolidating faces a harder problem.  Use a sub-routine to do that.
      //
-     vtkPolyData *new_outPD = ConsolidateFacesWithGhostZones(outPD, list,
+     vtkPolyData *new_outPD = ConsolidateFacesWithGhostZones(outPD, offsets, connectivity,
                                                faceStart, rowSize, columnSize);
      outPD->Delete();
      outPD = new_outPD;
@@ -653,7 +669,7 @@ vtkRectilinearGridFacelistFilter::PrintSelf(ostream& os, vtkIndent indent)
 
 vtkPolyData *
 vtkRectilinearGridFacelistFilter::ConsolidateFacesWithGhostZones(
-  vtkPolyData *pd, vtkIdTypeArray *list, vector<int> &sideStart,
+  vtkPolyData *pd, vtkIdTypeArray *offsets, vtkIdTypeArray *connectivity, vector<int> &sideStart,
   vector<int> &rowSize, vector<int> &columnSize)
 {
   //
@@ -685,22 +701,25 @@ vtkRectilinearGridFacelistFilter::ConsolidateFacesWithGhostZones(
   if (gnv != NULL)
   {
       unsigned char *gna = gnv->GetPointer(0);
-      int nCells = pd->GetNumberOfCells();
+      vtkIdType nCells = pd->GetNumberOfCells();
       gza = new unsigned char[nCells];
       constructGZA = true;
 
       unsigned char *gz_val = NULL;
       if (gzv != NULL)
           gz_val = gzv->GetPointer(0);
-      vtkIdType *nl = list->GetPointer(0);
-      for (int i = 0 ; i < nCells ; ++i)
+      vtkIdType *ol = offsets->GetPointer(0);
+      vtkIdType *cl = connectivity->GetPointer(0);
+      for (vtkIdType i = 0 ; i < nCells ; ++i)
       {
-          int npts = *nl++;
+          // the difference between this offset and the next yields npts
+          // using i+1 is safe for ol because offsets size is nCells+1
+          vtkIdType npts = ol[i+1]-ol[i];
           bool oneOkay = false;
-          for (int j = 0 ; j < npts ; ++j)
+          for (vtkIdType j = 0 ; j < npts ; ++j)
           {
-              oneOkay = oneOkay || (gna[*nl] == 0);
-              ++nl;
+              oneOkay = oneOkay || (gna[*cl] == 0);
+              ++cl;
           }
           gza[i] = (oneOkay ? 0 : 1);
           if (gz_val != NULL && gz_val[i] > 0)

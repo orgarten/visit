@@ -2,11 +2,11 @@
 // Project developers.  See the top-level LICENSE file for dates and other
 // details.  No copyright assignment is required to contribute to VisIt.
 
-#include "vtkOpenGL.h"
+#include <vtkOpenGL.h>
 
 #include <vtkQtRenderWindow.h>
 
-#include "QVTKOpenGLWidget.h"
+#include <QVTKOpenGLNativeWidget.h>
 
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <QVTKInteractor.h>
@@ -20,9 +20,6 @@
 #define GLX_GLXEXT_LEGACY
 #include <GL/glx.h>
 #endif
-
-#include <vtkAutoInit.h>
-VTK_MODULE_INIT(vtkRenderingOpenGL2);
 
 
 #ifdef Q_OS_OSX
@@ -91,24 +88,27 @@ public:
         // alpha channel (at least for OS X). However, not asking for
         // the channel seems to be benign. In addition, the 2D view
         // bounds and picking are off.
-        gl = new QVTKOpenGLWidget(w);
-        if (!gl->GetRenderWindow())
+
+// VTK seems to recommend dusing NativeWidget, so give it a try, but we may need
+// to use QVTKOpenGLStereoWidget which is the old QVTKOpenGLWidget renamed
+        gl = new QVTKOpenGLNativeWidget(w);
+        if (!gl->renderWindow())
         {
             vtkGenericOpenGLRenderWindow *renWin = vtkGenericOpenGLRenderWindow::New();
-            gl->SetRenderWindow(renWin);
+            gl->setRenderWindow(renWin);
             renWin->Delete();
         }
-        gl->GetRenderWindow()->AlphaBitPlanesOn();
-        gl->GetRenderWindow()->SetStereoRender( stereo );
-        gl->GetRenderWindow()->AlphaBitPlanesOn();
-        gl->GetRenderWindow()->SetStereoRender( stereo );
+        gl->renderWindow()->AlphaBitPlanesOn();
+        gl->renderWindow()->SetStereoRender( stereo );
+        gl->renderWindow()->AlphaBitPlanesOn();
+        gl->renderWindow()->SetStereoRender( stereo );
     }
 
     virtual ~vtkQtRenderWindowPrivate()
     {
     }
 
-    QVTKOpenGLWidget     *gl;
+    QVTKOpenGLNativeWidget     *gl;
     
     void          (*resizeEventCallback)(void *);
     void           *resizeEventData;
@@ -178,7 +178,7 @@ vtkQtRenderWindow::Delete()
 vtkRenderWindow *
 vtkQtRenderWindow::GetRenderWindow()
 {
-    return d->gl->GetRenderWindow();
+    return d->gl->renderWindow();
 }
 
     // Description:
@@ -186,7 +186,7 @@ vtkQtRenderWindow::GetRenderWindow()
 vtkRenderWindowInteractor * 
 vtkQtRenderWindow::GetInteractor()
 {
-    return d->gl->GetInteractor();
+    return d->gl->interactor();
 }
 
 QWidget *

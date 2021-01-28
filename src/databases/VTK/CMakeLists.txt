@@ -59,7 +59,6 @@ ${VISIT_INCLUDE_DIR}/avt/Pipeline/Sources
 ${VISIT_INCLUDE_DIR}/avt/VisWindow/VisWindow
 ${VISIT_INCLUDE_DIR}/visit_vtk/full
 ${VISIT_INCLUDE_DIR}/visit_vtk/lightweight
-${VTK_INCLUDE_DIRS}
 )
 
 LINK_DIRECTORIES(${VISIT_LIBRARY_DIR} )
@@ -70,19 +69,19 @@ SET(INSTALLTARGETS IVTKDatabase)
 
 IF(NOT VISIT_ENGINE_ONLY AND NOT VISIT_DBIO_ONLY)
     ADD_LIBRARY(MVTKDatabase ${LIBM_SOURCES})
-    TARGET_LINK_LIBRARIES(MVTKDatabase visitcommon avtdbatts avtdatabase_ser vtkFiltersGeneral vtkIOXML vtkIOXMLParser )
+    TARGET_LINK_LIBRARIES(MVTKDatabase visitcommon avtdbatts avtdatabase_ser VTK::IOXML VTK::IOXMLParser )
     ADD_TARGET_DEFINITIONS(MVTKDatabase MDSERVER)
     SET(INSTALLTARGETS ${INSTALLTARGETS} MVTKDatabase)
 ENDIF(NOT VISIT_ENGINE_ONLY AND NOT VISIT_DBIO_ONLY)
 
 ADD_LIBRARY(EVTKDatabase_ser ${LIBE_SOURCES})
-TARGET_LINK_LIBRARIES(EVTKDatabase_ser visitcommon avtdatabase_ser avtpipeline_ser vtkFiltersGeneral vtkIOXML vtkIOXMLParser )
+TARGET_LINK_LIBRARIES(EVTKDatabase_ser visitcommon avtdatabase_ser avtpipeline_ser VTK::IOXML VTK::IOXMLParser )
 ADD_TARGET_DEFINITIONS(EVTKDatabase_ser ENGINE)
 SET(INSTALLTARGETS ${INSTALLTARGETS} EVTKDatabase_ser)
 
 IF(VISIT_PARALLEL)
     ADD_PARALLEL_LIBRARY(EVTKDatabase_par ${LIBE_SOURCES})
-    TARGET_LINK_LIBRARIES(EVTKDatabase_par visitcommon avtdatabase_par avtpipeline_par vtkFiltersGeneral vtkIOXML vtkIOXMLParser )
+    TARGET_LINK_LIBRARIES(EVTKDatabase_par visitcommon avtdatabase_par avtpipeline_par VTK::IOXML VTK::IOXMLParser )
     ADD_TARGET_DEFINITIONS(EVTKDatabase_par ENGINE)
     SET(INSTALLTARGETS ${INSTALLTARGETS} EVTKDatabase_par)
 ENDIF(VISIT_PARALLEL)

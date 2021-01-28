@@ -22,11 +22,16 @@
 //  Programmer: Hank Childs
 //  Creation:   October 7, 2002
 //
+//  Modifications:
+//    Kathleen Biagas, Thu Apr  2 17:41:55 PDT 2020
+//    Add offsets, to keep in line with storage in VTK 9's vtkCellArray class:
+//    separate connectivity and offsets arrays.  Remove cellIndex.
+//
 // ****************************************************************************
 
 MIRConnectivity::MIRConnectivity()
 {
-    cellindex = NULL;
+    offsets = NULL;
     connectivity = NULL;
     celltype = NULL;
     ncells = 0;
@@ -38,13 +43,18 @@ MIRConnectivity::MIRConnectivity()
 //  Programmer: Hank Childs
 //  Creation:   October 7, 2002
 //
+//  Modifications:
+//    Kathleen Biagas, Thu Apr  2 17:41:55 PDT 2020
+//    Add offsets, to keep in line with storage in VTK 9's vtkCellArray class:
+//    separate connectivity and offsets arrays.  Remove cellIndex.
+//
 // ****************************************************************************
 
 MIRConnectivity::~MIRConnectivity()
 {
-    if (cellindex != NULL)
+    if (offsets != NULL)
     {
-        delete [] cellindex;
+        delete [] offsets;
     }
     if (connectivity != NULL)
     {
@@ -80,6 +90,11 @@ MIRConnectivity::~MIRConnectivity()
 //
 //    Mark C. Miller, Fri Oct 19 15:45:06 PDT 2018
 //    Handle VTK_POLY_DATA in same block as VTK_UNSTRUCTURED_GRID
+//
+//    Kathleen Biagas, Thu Apr  2 17:41:55 PDT 2020
+//    Add offsets, to keep in line with storage in VTK 9's vtkCellArray class:
+//    separate connectivity and offsets arrays.  Remove cellIndex.
+//
 // ****************************************************************************
 
 void
@@ -110,10 +125,20 @@ MIRConnectivity::SetUpConnectivity(vtkDataSet *ds)
         {
             ncells = nx*ny*nz;
             int cell_idx = 0;
-            cellindex = new int[ncells];
             celltype = new int[ncells];
-            connectivity = new vtkIdType[9*ncells];
+            connectivity = new vtkIdType[8*ncells];
             vtkIdType *c = connectivity;
+
+            // offsets always nCells +1 in size
+            offsets = new vtkIdType[ncells+1];
+            vtkIdType *o = offsets;
+            // First offset is always 0, so set it here, outside of the loop.
+            *o++ = 0;
+            // Subsequent offsets are incremented by the number of ids in
+            // the current cell, so set up a holder for that increment.
+            vtkIdType currentOffset = 0;
+            // The last entry in offsets will hold the size of connectivity
+
             for (int k = 0 ; k < nz ; k++)
             {
                 int zOff  = k*(nx+1)*(ny+1);
@@ -124,10 +149,10 @@ MIRConnectivity::SetUpConnectivity(vtkDataSet *ds)
                     int yOff1 = (j+1)*(nx+1);
                     for (int i = 0 ; i < nx ; i++)
                     {
-                        cellindex[cell_idx] = (c - connectivity);
                         if (dstype == VTK_RECTILINEAR_GRID)
                         {
-                            *c++ = 8;
+                            currentOffset += 8;
+                            *o++ = currentOffset;
                             *c++ = zOff + yOff + i;
                             *c++ = zOff + yOff + i+1;
                             *c++ = zOff + yOff1 + i;
@@ -140,7 +165,8 @@ MIRConnectivity::SetUpConnectivity(vtkDataSet *ds)
                         }
                         else
                         {
-                            *c++ = 8;
+                            currentOffset += 8;
+                            *o++ = currentOffset;
                             *c++ = zOff + yOff + i;
                             *c++ = zOff + yOff + i+1;
                             *c++ = zOff + yOff1 + i+1;
@@ -159,20 +185,30 @@ MIRConnectivity::SetUpConnectivity(vtkDataSet *ds)
         {
             ncells = nx*ny;
             int cell_idx = 0;
-            cellindex = new int[ncells];
             celltype = new int[ncells];
-            connectivity = new vtkIdType[5*ncells];
+            connectivity = new vtkIdType[4*ncells];
             vtkIdType *c = connectivity;
+
+            // offsets always nCells +1 in size
+            offsets = new vtkIdType[ncells+1];
+            vtkIdType *o = offsets;
+            // First offset is always 0, so set it here, outside of the loop.
+            *o++ = 0;
+            // Subsequent offsets are incremented by the number of ids in
+            // the current cell, so set up a holder for that increment.
+            vtkIdType currentOffset = 0;
+            // The last entry in offsets will hold the size of connectivity
+
             for (int j = 0 ; j < ny ; j++)
             {
                 int yOff  = j*(nx+1);
                 int yOff1 = (j+1)*(nx+1);
                 for (int i = 0 ; i < nx ; i++)
                 {
-                    cellindex[cell_idx] = (c - connectivity);
                     if (dstype == VTK_RECTILINEAR_GRID)
                     {
-                        *c++ = 4;
+                        currentOffset+=4;
+                        *o++ = currentOffset;
                         *c++ = yOff + i;
                         *c++ = yOff + i+1;
                         *c++ = yOff1 + i;
@@ -181,7 +217,8 @@ MIRConnectivity::SetUpConnectivity(vtkDataSet *ds)
                     }
                     else
                     {
-                        *c++ = 4;
+                        currentOffset+=4;
+                        *o++ = currentOffset;
                         *c++ = yOff + i;
                         *c++ = yOff + i+1;
                         *c++ = yOff1 + i+1;
@@ -198,25 +235,37 @@ MIRConnectivity::SetUpConnectivity(vtkDataSet *ds)
         vtkPolyData *pd = (vtkPolyData *) ds;
         vtkCellArray *ca = dstype==VTK_POLY_DATA?pd->GetPolys():ug->GetCells();
         ncells = ca->GetNumberOfCells();
-        int buff_size = ca->GetSize();
-        connectivity = new vtkIdType[buff_size];
-        vtkIdType *ptr = ca->GetPointer();
-        memcpy(connectivity, ptr, buff_size*sizeof(vtkIdType));
-        debug5 << "Setting up connectivity array for " << ncells
-               << " (unstructured grid)." << endl;
 
+        if (dstype == VTK_POLY_DATA)
+        {
+            debug5 << "Setting up connectivity array for " << ncells
+                   << " (polydata)." << endl;
+        }
+        else
+        {
+            debug5 << "Setting up connectivity array for " << ncells
+                   << " (unstructured grid)." << endl;
+        }
+       
+        // connectivity
+        vtkDataArray *conn_array = ca->GetConnectivityArray();
+        vtkIdType csize = conn_array->GetNumberOfTuples();
+        connectivity = new vtkIdType[csize];
+        for (vtkIdType i = 0 ; i < conn_array->GetNumberOfTuples(); ++i)
+                connectivity[i] = vtkIdType(conn_array->GetTuple1(i));
+
+        // offsets
+        vtkDataArray *off_array = ca->GetOffsetsArray();
+        vtkIdType osize = off_array->GetNumberOfTuples();
+        offsets = new vtkIdType[osize];
+        for (vtkIdType i = 0 ; i < off_array->GetNumberOfTuples(); ++i)
+            offsets[i] = vtkIdType(off_array->GetTuple1(i));
+
+        // celltypes
         celltype = new int[ncells];
-        for (int i = 0 ; i < ncells ; i++)
+        for (vtkIdType i = 0 ; i < ncells ; i++)
         {
             celltype[i] = dstype==VTK_POLY_DATA?pd->GetCellType(i):ug->GetCellType(i);
-        }
-
-        int c = 0;
-        cellindex = new int[ncells];
-        for (int j = 0 ; j < ncells ; j++)
-        {
-            cellindex[j] = c;
-            c += connectivity[c] + 1;
         }
     }
     else

@@ -42,10 +42,9 @@ ${ALL_THIRDPARTY_IO_LIBRARY_DIR}
 )
 
 SET(VTK_EXTRA_LIBS
-vtktiff
-vtkjpeg
-vtkpng
-${VTK_FREETYPE_LIBRARIES}
+VTK::tiff
+VTK::jpeg
+VTK::png
 )
 
 ADD_EXECUTABLE(visitprotocol dump_protocol.C ${STATIC_SOURCES})
